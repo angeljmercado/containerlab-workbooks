@@ -1,0 +1,191 @@
+# Routed Access Campus + Dual ISP Lab
+# Topology: Simulated Internet → ISP-1/2 → Border-R1/2 → Core → Distribution → Access → Hosts
+#
+# Images required (build from CML Free Tier refplat ISO via srl-labs/vrnetlab):
+#   IOL        : vrnetlab/cisco_iol:17.18.02         (pure L3 — isp, border, core)
+#   IOL-L2     : vrnetlab/cisco_iol:L2-17.18.02      (multilayer L2+L3 — dist, access)
+#   Ubuntu VM  : vrnetlab/canonical_ubuntu:resolute        (host1, host2 — SSH-able test hosts)
+#   multitool  : ghcr.io/srl-labs/network-multitool:latest (iperf1, iperf2 — SSH-able, bundles iperf3)
+#
+# IP Addressing:
+#   isp1 ↔ border-r1 (eBGP)     192.0.2.0/30      .1=isp1    .2=br1
+#   isp2 ↔ border-r2 (eBGP)     198.51.100.0/30   .1=isp2    .2=br2
+#   isp1 ↔ internet-r1 (eBGP)   192.0.2.4/30      .5=isp1    .6=internet
+#   isp2 ↔ internet-r1 (eBGP)   198.51.100.4/30   .5=isp2    .6=internet
+#   border-r1 ↔ border-r2 iBGP  10.255.0.0/30     .1=br1     .2=br2
+#   border-r1 ↔ core-r1        10.0.0.0/30       .1=br1     .2=cr1
+#   border-r1 ↔ core-r2        10.0.0.4/30       .5=br1     .6=cr2
+#   border-r2 ↔ core-r1        10.0.0.8/30       .9=br2     .10=cr1
+#   border-r2 ↔ core-r2        10.0.0.12/30      .13=br2    .14=cr2
+#   core-r1  ↔ dist-sw1        10.0.1.0/30       .1=cr1    .2=dsw1
+#   core-r1  ↔ dist-sw2        10.0.1.4/30       .5=cr1    .6=dsw2
+#   core-r2  ↔ dist-sw1        10.0.1.8/30       .9=cr2    .10=dsw1
+#   core-r2  ↔ dist-sw2        10.0.1.12/30      .13=cr2   .14=dsw2
+#   dist-sw1  ↔ acc-sw1         10.1.15.0/30      .1=dsw1    .2=asw1
+#   dist-sw2  ↔ acc-sw1         10.1.15.4/30      .5=dsw2    .6=asw1
+#   dist-sw1  ↔ acc-sw2         10.1.15.8/30      .9=dsw1    .10=asw2
+#   dist-sw2  ↔ acc-sw2         10.1.15.12/30     .13=dsw2   .14=asw2
+#   acc-sw1 VLAN 10 SVI          10.1.0.0/25       .1=gw    .10=host1  .11=iperf1
+#   acc-sw1 VLAN 11 SVI          10.1.0.128/25     .129=gw
+#   acc-sw2 VLAN 20 SVI          10.1.1.0/25       .1=gw    .10=host2  .11=iperf2
+#   acc-sw2 VLAN 21 SVI          10.1.1.128/25     .129=gw
+#   Loopbacks: internet=192.0.2.200  isp1=192.0.2.101  isp2=198.51.100.101
+#              br1=10.0.255.1  br2=10.0.255.2
+#              cr1=10.0.254.1  cr2=10.0.254.2  dsw1=10.0.253.1  dsw2=10.0.253.2
+#
+# BGP: AS65000=campus  AS65001=ISP-1  AS65002=ISP-2  AS64500=simulated Internet
+#   eBGP: internet↔ISPs, br1↔isp1, br2↔isp2 | iBGP: br1↔br2
+#   internet advertises 0.0.0.0/0; campus advertises 203.0.113.0/24
+#   Outbound: LOCAL_PREF 200 (ISP-1) / 100 (ISP-2)
+#   Inbound:  AS_PATH prepend x3 on advertisement to ISP-2
+#
+# OSPF: Area 0 = border+core+dist-uplinks | Area 1 stub = dist-downlinks+access
+#   dist-sw1/2 are ABRs; summarize 10.1.0.0/20 into Area 0
+#   default-information originate on border routers → campus gets default route
+#
+# Deploy:  sudo clab deploy  -t routed-access-dual-isp.clab.yml
+# Destroy: sudo clab destroy -t routed-access-dual-isp.clab.yml -c
+# Connect: sudo clab connect -t routed-access-dual-isp.clab.yml --node <name>
+
+name: routed-access-dual-isp
+
+mgmt:
+  network: clab-mgmt
+  # /27 = 30 usable addresses: gw (.1) + 15 nodes (.2-.16) + .17-.30 spare.
+  ipv4-subnet: 172.20.4.0/27
+  ipv4-gw: 172.20.4.1
+
+topology:
+
+  # Per-kind default image — nodes below only set image: where they deviate from this.
+  kinds:
+    cisco_iol:
+      image: vrnetlab/cisco_iol:L2-17.18.02 # multilayer L2+L3 — dist, access
+    generic_vm:
+      image: vrnetlab/canonical_ubuntu:resolute # SSH-able Ubuntu VM
+      credentials:
+        username: sysadmin
+        password: sysadmin
+
+  nodes:
+
+    # -- Isolated upstream (AS 64500) — shared transit used to prove inbound BGP policy
+    internet-r1:
+      kind: cisco_iol
+      image: vrnetlab/cisco_iol:17.18.02
+      mgmt-ipv4: 172.20.4.16
+
+    # -- ISPs (AS 65001 / 65002) — filtered customer and upstream eBGP
+    isp1:
+      kind: cisco_iol
+      image: vrnetlab/cisco_iol:17.18.02 # pure L3
+      mgmt-ipv4: 172.20.4.2
+    isp2:
+      kind: cisco_iol
+      image: vrnetlab/cisco_iol:17.18.02
+      mgmt-ipv4: 172.20.4.3
+
+    # -- Border routers (AS 65000) — eBGP to ISPs, iBGP peer each other, OSPF Area 0
+    border-r1:
+      kind: cisco_iol
+      image: vrnetlab/cisco_iol:17.18.02
+      mgmt-ipv4: 172.20.4.4
+    border-r2:
+      kind: cisco_iol
+      image: vrnetlab/cisco_iol:17.18.02
+      mgmt-ipv4: 172.20.4.5
+
+    # -- Core — pure L3 forwarding, OSPF Area 0
+    core-r1:
+      kind: cisco_iol
+      image: vrnetlab/cisco_iol:17.18.02
+      mgmt-ipv4: 172.20.4.6
+    core-r2:
+      kind: cisco_iol
+      image: vrnetlab/cisco_iol:17.18.02
+      mgmt-ipv4: 172.20.4.7
+
+    # -- Distribution — OSPF ABR (Area 0 + Area 1 stub), summarize 10.1.0.0/20
+    dist-sw1:
+      kind: cisco_iol
+      type: L2
+      mgmt-ipv4: 172.20.4.8
+    dist-sw2:
+      kind: cisco_iol
+      type: L2
+      mgmt-ipv4: 172.20.4.9
+
+    # -- Access — IOL-L2 multilayer: L2 to hosts (VLANs/STP), L3 uplinks (OSPF Area 1)
+    acc-sw1:
+      kind: cisco_iol
+      type: L2
+      mgmt-ipv4: 172.20.4.10
+    acc-sw2:
+      kind: cisco_iol
+      type: L2
+      mgmt-ipv4: 172.20.4.11
+
+    # -- Hosts — Ubuntu VMs, SSH-able (sysadmin:sysadmin, see kinds.generic_vm.credentials); configure IP/GW manually (Phase 6)
+    host1:
+      kind: generic_vm
+      mgmt-ipv4: 172.20.4.12
+    host2:
+      kind: generic_vm
+      mgmt-ipv4: 172.20.4.13
+
+    # -- iperf3 test endpoints — one per access VLAN; SSH-able, bundles iperf3
+    # image bakes in admin:multit00l at build time (no env var to override it), so exec:
+    # provisions a sysadmin:sysadmin account post-boot to match host1/host2's credentials.
+    iperf1:
+      kind: linux
+      image: ghcr.io/srl-labs/network-multitool:latest
+      exec:
+        - sh -c 'adduser -D -h /home/sysadmin -s /bin/bash sysadmin'
+        - sh -c 'echo "sysadmin:sysadmin" | chpasswd'
+      mgmt-ipv4: 172.20.4.14
+    iperf2:
+      kind: linux
+      image: ghcr.io/srl-labs/network-multitool:latest
+      exec:
+        - sh -c 'adduser -D -h /home/sysadmin -s /bin/bash sysadmin'
+        - sh -c 'echo "sysadmin:sysadmin" | chpasswd'
+      mgmt-ipv4: 172.20.4.15
+
+  links:
+
+    # Simulated Internet ↔ ISP transit (eBGP)
+    - endpoints: [ isp1:eth2, internet-r1:eth1 ] # 192.0.2.4/30     isp1=.5  internet=.6
+    - endpoints: [ isp2:eth2, internet-r1:eth2 ] # 198.51.100.4/30 isp2=.5  internet=.6
+
+    # ISP ↔ Border (eBGP)
+    - endpoints: [ isp1:eth1, border-r1:eth1 ] # 192.0.2.0/30      isp1=.1  br1=.2
+    - endpoints: [ isp2:eth1, border-r2:eth1 ] # 198.51.100.0/30  isp2=.1  br2=.2
+
+    # Border ↔ Border (iBGP direct link)
+    - endpoints: [ border-r1:eth2, border-r2:eth2 ] # 10.255.0.0/30     br1=.1     br2=.2
+
+    # Border ↔ Core (OSPF Area 0)
+    - endpoints: [ border-r1:eth3, core-r1:eth1 ] # 10.0.0.0/30       br1=.1     cr1=.2
+    - endpoints: [ border-r1:eth4, core-r2:eth1 ] # 10.0.0.4/30       br1=.5     cr2=.6
+    - endpoints: [ border-r2:eth3, core-r1:eth2 ] # 10.0.0.8/30       br2=.9     cr1=.10
+    - endpoints: [ border-r2:eth4, core-r2:eth2 ] # 10.0.0.12/30      br2=.13    cr2=.14
+
+    # Core ↔ Distribution (OSPF Area 0)
+    - endpoints: [ core-r1:eth3, dist-sw1:eth1 ] # 10.0.1.0/30       cr1=.1    dsw1=.2
+    - endpoints: [ core-r1:eth4, dist-sw2:eth1 ] # 10.0.1.4/30       cr1=.5    dsw2=.6
+    - endpoints: [ core-r2:eth3, dist-sw1:eth2 ] # 10.0.1.8/30       cr2=.9    dsw1=.10
+    - endpoints: [ core-r2:eth4, dist-sw2:eth2 ] # 10.0.1.12/30      cr2=.13   dsw2=.14
+
+    # Distribution ↔ Access — L3 routed P2P, both active via ECMP (no STP, no HSRP)
+    - endpoints: [ dist-sw1:eth3, acc-sw1:eth1 ] # 10.1.15.0/30      dsw1=.1    asw1=.2
+    - endpoints: [ dist-sw2:eth3, acc-sw1:eth2 ] # 10.1.15.4/30      dsw2=.5    asw1=.6
+    - endpoints: [ dist-sw1:eth4, acc-sw2:eth1 ] # 10.1.15.8/30      dsw1=.9    asw2=.10
+    - endpoints: [ dist-sw2:eth4, acc-sw2:eth2 ] # 10.1.15.12/30     dsw2=.13   asw2=.14
+
+    # Access ↔ Hosts — only L2 links in the topology (portfast + bpduguard on switch side)
+    - endpoints: [ acc-sw1:eth3, host1:eth1 ] # L2 access port — VLAN 10
+    - endpoints: [ acc-sw2:eth3, host2:eth1 ] # L2 access port — VLAN 20
+
+    # Access ↔ iperf3 endpoints — same VLAN as the host on each side
+    - endpoints: [ acc-sw1:eth4, iperf1:eth1 ] # L2 access port — VLAN 10
+    - endpoints: [ acc-sw2:eth4, iperf2:eth1 ] # L2 access port — VLAN 20

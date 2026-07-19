@@ -1,0 +1,306 @@
+{
+  "freeTextAnnotations": [],
+  "freeShapeAnnotations": [],
+  "trafficRateAnnotations": [],
+  "groupStyleAnnotations": [],
+  "networkNodeAnnotations": [],
+  "nodeAnnotations": [
+    {
+      "id": "isp1",
+      "interfacePattern": "e0/{n}",
+      "position": {
+        "x": 300,
+        "y": 20
+      },
+      "icon": "router-2d-gen-darkgray-s"
+    },
+    {
+      "id": "isp2",
+      "interfacePattern": "e0/{n}",
+      "position": {
+        "x": 480,
+        "y": 20
+      },
+      "icon": "router-2d-gen-darkgray-s"
+    },
+    {
+      "id": "border-r1",
+      "interfacePattern": "e0/{n}",
+      "position": {
+        "x": 300,
+        "y": 180
+      },
+      "icon": "router-2d-gen-darkgray-s"
+    },
+    {
+      "id": "border-r2",
+      "interfacePattern": "e0/{n}",
+      "position": {
+        "x": 480,
+        "y": 180
+      },
+      "icon": "router-2d-gen-darkgray-s"
+    },
+    {
+      "id": "core-r1",
+      "interfacePattern": "e0/{n}",
+      "position": {
+        "x": 240,
+        "y": 300
+      },
+      "icon": "router-2d-gen-darkgray-s"
+    },
+    {
+      "id": "core-r2",
+      "interfacePattern": "e0/{n}",
+      "position": {
+        "x": 560,
+        "y": 300
+      },
+      "icon": "router-2d-gen-darkgray-s"
+    },
+    {
+      "id": "dist-sw1",
+      "interfacePattern": "e0/{n}",
+      "position": {
+        "x": 300,
+        "y": 440
+      },
+      "icon": "switch-2d-l3-generic-s-darkgray"
+    },
+    {
+      "id": "dist-sw2",
+      "interfacePattern": "e0/{n}",
+      "position": {
+        "x": 480,
+        "y": 440
+      },
+      "icon": "switch-2d-l3-generic-s-darkgray"
+    },
+    {
+      "id": "acc-sw1",
+      "interfacePattern": "e0/{n}",
+      "position": {
+        "x": 240,
+        "y": 620
+      },
+      "icon": "switch-2d-l3-generic-s-darkgray"
+    },
+    {
+      "id": "acc-sw2",
+      "interfacePattern": "e0/{n}",
+      "position": {
+        "x": 540,
+        "y": 620
+      },
+      "icon": "switch-2d-l3-generic-s-darkgray"
+    },
+    {
+      "id": "host1",
+      "position": {
+        "x": 140,
+        "y": 740
+      },
+      "icon": "pc-2d-desktop-generic-s-darkblue"
+    },
+    {
+      "id": "host2",
+      "position": {
+        "x": 600,
+        "y": 740
+      },
+      "icon": "pc-2d-desktop-generic-s-darkblue"
+    },
+    {
+      "id": "iperf1",
+      "position": {
+        "x": 300,
+        "y": 740
+      },
+      "icon": "server-2d-generic-s-darkgray"
+    },
+    {
+      "id": "iperf2",
+      "position": {
+        "x": 460,
+        "y": 740
+      },
+      "icon": "server-2d-generic-s-darkgray"
+    },
+    {
+      "id": "internet-r1",
+      "interfacePattern": "e0/{n}",
+      "position": {
+        "x": 380,
+        "y": -100
+      },
+      "icon": "cloud-default-darkgray"
+    }
+  ],
+  "edgeAnnotations": [
+    {
+      "id": "Clab-Link8",
+      "source": "core-r1",
+      "target": "dist-sw2",
+      "sourceEndpoint": "eth4",
+      "targetEndpoint": "eth1",
+      "endpointLabelOffsetEnabled": true,
+      "endpointLabelOffset": 27
+    },
+    {
+      "id": "Clab-Link9",
+      "source": "core-r2",
+      "target": "dist-sw1",
+      "sourceEndpoint": "eth3",
+      "targetEndpoint": "eth2",
+      "endpointLabelOffsetEnabled": true,
+      "endpointLabelOffset": 28
+    },
+    {
+      "id": "Clab-Link11",
+      "source": "dist-sw1",
+      "target": "acc-sw1",
+      "sourceEndpoint": "eth3",
+      "targetEndpoint": "eth1",
+      "endpointLabelOffsetEnabled": true,
+      "endpointLabelOffset": 30
+    },
+    {
+      "id": "Clab-Link14",
+      "source": "dist-sw2",
+      "target": "acc-sw2",
+      "sourceEndpoint": "eth4",
+      "targetEndpoint": "eth2",
+      "endpointLabelOffsetEnabled": true,
+      "endpointLabelOffset": 29
+    },
+    {
+      "id": "Clab-Link16",
+      "source": "acc-sw2",
+      "target": "host2",
+      "sourceEndpoint": "eth3",
+      "targetEndpoint": "eth1",
+      "endpointLabelOffsetEnabled": true,
+      "endpointLabelOffset": 25
+    },
+    {
+      "id": "Clab-Link15",
+      "source": "acc-sw1",
+      "target": "host1",
+      "sourceEndpoint": "eth3",
+      "targetEndpoint": "eth1",
+      "endpointLabelOffsetEnabled": true,
+      "endpointLabelOffset": 39
+    },
+    {
+      "id": "Clab-Link6",
+      "source": "border-r2",
+      "target": "core-r2",
+      "sourceEndpoint": "eth4",
+      "targetEndpoint": "eth2",
+      "endpointLabelOffsetEnabled": true,
+      "endpointLabelOffset": 27
+    },
+    {
+      "id": "Clab-Link3",
+      "source": "border-r1",
+      "target": "core-r1",
+      "sourceEndpoint": "eth3",
+      "targetEndpoint": "eth1",
+      "endpointLabelOffsetEnabled": true,
+      "endpointLabelOffset": 26
+    },
+    {
+      "id": "Clab-Link0",
+      "source": "isp1",
+      "target": "border-r1",
+      "sourceEndpoint": "eth1",
+      "targetEndpoint": "eth1",
+      "endpointLabelOffsetEnabled": true,
+      "endpointLabelOffset": 25
+    },
+    {
+      "id": "Clab-Link1",
+      "source": "isp2",
+      "target": "border-r2",
+      "sourceEndpoint": "eth1",
+      "targetEndpoint": "eth1",
+      "endpointLabelOffsetEnabled": true,
+      "endpointLabelOffset": 25
+    },
+    {
+      "id": "Clab-Link13",
+      "source": "dist-sw1",
+      "target": "acc-sw2",
+      "sourceEndpoint": "eth4",
+      "targetEndpoint": "eth1",
+      "endpointLabelOffsetEnabled": true,
+      "endpointLabelOffset": 32
+    },
+    {
+      "id": "Clab-Link12",
+      "source": "dist-sw2",
+      "target": "acc-sw1",
+      "sourceEndpoint": "eth3",
+      "targetEndpoint": "eth2",
+      "endpointLabelOffsetEnabled": true,
+      "endpointLabelOffset": 34
+    },
+    {
+      "id": "Clab-Link10",
+      "source": "core-r2",
+      "target": "dist-sw2",
+      "sourceEndpoint": "eth4",
+      "targetEndpoint": "eth2",
+      "endpointLabelOffsetEnabled": true,
+      "endpointLabelOffset": 27
+    },
+    {
+      "id": "Clab-Link7",
+      "source": "core-r1",
+      "target": "dist-sw1",
+      "sourceEndpoint": "eth3",
+      "targetEndpoint": "eth1",
+      "endpointLabelOffsetEnabled": true,
+      "endpointLabelOffset": 26
+    },
+    {
+      "id": "Clab-Link17",
+      "source": "acc-sw1",
+      "target": "iperf1",
+      "sourceEndpoint": "eth4",
+      "targetEndpoint": "eth1",
+      "endpointLabelOffsetEnabled": true,
+      "endpointLabelOffset": 31
+    },
+    {
+      "id": "Clab-Link18",
+      "source": "acc-sw2",
+      "target": "iperf2",
+      "sourceEndpoint": "eth4",
+      "targetEndpoint": "eth1",
+      "endpointLabelOffsetEnabled": true,
+      "endpointLabelOffset": 33
+    },
+    {
+      "id": "Clab-Link1",
+      "source": "isp2",
+      "target": "internet-r1",
+      "sourceEndpoint": "eth2",
+      "targetEndpoint": "eth2",
+      "endpointLabelOffsetEnabled": true,
+      "endpointLabelOffset": 37
+    },
+    {
+      "id": "Clab-Link0",
+      "source": "isp1",
+      "target": "internet-r1",
+      "sourceEndpoint": "eth2",
+      "targetEndpoint": "eth1",
+      "endpointLabelOffsetEnabled": true,
+      "endpointLabelOffset": 31
+    }
+  ],
+  "aliasEndpointAnnotations": [],
+  "viewerSettings": {}
+}
